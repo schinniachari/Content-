@@ -1,0 +1,31 @@
+import com.splunk.*;
+
+public class SplunkConnectionTester {
+
+    private static final String SPLUNK_HOST = "your_splunk_host";
+    private static final int SPLUNK_PORT = 8089;
+    private static final String SPLUNK_USERNAME = "your_splunk_username";
+    private static final String SPLUNK_PASSWORD = "your_splunk_password";
+
+    public static void main(String[] args) {
+        Service service = Service.connect(createServiceArgs());
+        try {
+            Receiver receiver = service.getReceiver();
+            System.out.println("Successfully connected to Splunk!");
+            System.out.println("Version: " + service.getInfo().getVersion());
+        } catch (Exception e) {
+            System.err.println("Failed to connect to Splunk: " + e.getMessage());
+        } finally {
+            service.logout();
+        }
+    }
+
+    private static Args createServiceArgs() {
+        Map<String, Object> connectionArgs = new HashMap<>();
+        connectionArgs.put("host", SPLUNK_HOST);
+        connectionArgs.put("port", SPLUNK_PORT);
+        connectionArgs.put("username", SPLUNK_USERNAME);
+        connectionArgs.put("password", SPLUNK_PASSWORD);
+        return new Args(connectionArgs);
+    }
+}
