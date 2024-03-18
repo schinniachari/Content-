@@ -1,0 +1,78 @@
+import com.splunk.Args;
+import com.splunk.Job;
+import com.splunk.JobResultsArgs;
+import com.splunk.ResultsReaderXml;
+import com.splunk.Service;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
+
+public class SplunkUtil {
+
+    private static final String SPLUNK_HOST = "your_splunk_host";
+    private static final int SPLUNK_PORT = 8089;
+    private static final String SPLUNK_USERNAME = "your_splunk_username";
+    private static final String SPLUNK_PASSWORD = "your_splunk_password";
+
+    private static final String SEARCH_QUERY = "your_splunk_search_query";
+    private static final int SEARCH_EARLIEST_TIME = -24; // 24 hours ago
+    private static final int SEARCH_LATEST_TIME = 0;   // Now
+
+    public static void main(String[] args) {
+        executeSearchQuery();
+    }
+
+    public static void executeSearchQuery() {
+        Service service = Service.connect(createServiceArgs());
+        Args searchArgs = createSearchArgs();
+
+        try {
+            Job job = service.getJobs().create(SEARCH_QUERY, searchArgs);
+            job.waitForCompletion();
+            displaySearchResults(job);
+        } catch (InterruptedException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            service.logout();
+        }
+    }
+
+    private static Args createServiceArgs() {
+        Map<String, Object> connectionArgs = new HashMap<>();
+        connectionArgs.put("host", SPLUNK_HOST);
+        connectionArgs.put("port", SPLUNK_PORT);
+        connectionArgs.put("username", SPLUNK_USERNAME);
+        connectionArgs.put("password", SPLUNK_PASSWORD);
+        return new Args(connectionArgs);
+    }
+
+    private static Args createSearchArgs() {
+        Args searchArgs = new Args();
+        searchArgs.put("earliest_time", String.valueOf(SEARCH_EARLIEST_TIME) + "h");
+        searchArgs.put("latest_time", String.valueOf(SEARCH_LATEST_TIME) + "h");
+        return searchArgs;
+    }
+
+    private static void displaySearchResults(Job job) throws IOException {
+        JobResultsArgs resultsArgs = new JobResultsArgs();
+        resultsArgs.setOutputMode(JobResultsArgs.OutputMode.XML);
+
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new InputStreamReader(job.getResults(resultsArgs)));
+            ResultsReaderXml resultsReader = new ResultsReaderXml(reader);
+
+            HashMap<String, String> event;
+            while ((event = resultsReader.getNextEvent()) != null) {
+                System.out.println(event);
+            }
+        } finally {
+            if (reader != null) {
+                reader.close();
+            }
+        }
+    }
+}
